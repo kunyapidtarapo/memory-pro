@@ -38,13 +38,13 @@ function generateCards() {
   }));
 }
 
-
 app.get('/api/leaderboard', (req, res) => {
-  const rows = db.prepare(`
-    SELECT name, total_wins, total_games, best_score
-    FROM players ORDER BY total_wins DESC, best_score DESC LIMIT 10
-  `).all();
-  res.json(rows);
+  db.all(`SELECT name, total_wins, total_games, best_score
+    FROM players ORDER BY total_wins DESC, best_score DESC LIMIT 10`,
+    [], (err, rows) => {
+      if (err) return res.json([]);
+      res.json(rows);
+    });
 });
 
 io.on('connection', (socket) => {
@@ -55,10 +55,7 @@ io.on('connection', (socket) => {
     rooms[code] = {
       code,
       players: [{ id: socket.id, name: playerName, score: 0 }],
-      cards: [],
-      currentTurn: 0,
-      flippedCards: [],
-      started: false
+      cards: [], currentTurn: 0, flippedCards: [], started: false
     };
     socket.join(code);
     socket.roomCode = code;
@@ -71,7 +68,6 @@ io.on('connection', (socket) => {
     if (!room) return socket.emit('error', 'ไม่พบห้องนี้');
     if (room.started) return socket.emit('error', 'เกมเริ่มไปแล้ว');
     if (room.players.length >= 4) return socket.emit('error', 'ห้องเต็มแล้ว');
-
     room.players.push({ id: socket.id, name: playerName, score: 0 });
     socket.join(roomCode);
     socket.roomCode = roomCode;
@@ -85,13 +81,11 @@ io.on('connection', (socket) => {
     room.cards = generateCards();
     room.started = true;
     room.currentTurn = 0;
-
     const gameState = {
       cards: room.cards.map(c => ({ ...c, emoji: '🂠' })),
       currentPlayer: room.players[0].name,
       players: room.players
     };
-
     room.gameState = gameState;
     io.to(socket.roomCode).emit('gameStarted', gameState);
   });
@@ -99,14 +93,11 @@ io.on('connection', (socket) => {
   socket.on('flipCard', ({ cardId }) => {
     const room = rooms[socket.roomCode];
     if (!room || !room.started) return;
-
     const currentPlayer = room.players[room.currentTurn];
     if (currentPlayer.id !== socket.id) return;
     if (room.flippedCards.length >= 2) return;
-
     const card = room.cards[cardId];
     if (card.flipped || card.matched) return;
-
     card.flipped = true;
     room.flippedCards.push(card);
     io.to(socket.roomCode).emit('cardFlipped', { cardId, emoji: card.emoji });
@@ -118,30 +109,28 @@ io.on('connection', (socket) => {
           a.matched = b.matched = true;
           currentPlayer.score += 10;
           io.to(socket.roomCode).emit('cardsMatched', {
-            cardIds: [a.id, b.id],
-            players: room.players
+            cardIds: [a.id, b.id], players: room.players
           });
 
           if (room.cards.every(c => c.matched)) {
             const winner = room.players.reduce((a, b) => a.score > b.score ? a : b);
-
             room.players.forEach(p => {
-              const exists = db.prepare('SELECT id FROM players WHERE name = ?').get(p.name);
-              if (exists) {
-                db.prepare(`UPDATE players SET total_games = total_games + 1,
-                  total_wins = total_wins + ?, best_score = MAX(best_score, ?) WHERE name = ?`)
-                  .run(p.name === winner.name ? 1 : 0, p.score, p.name);
-              } else {
-                db.prepare(`INSERT INTO players (name, total_wins, total_games, best_score)
-                  VALUES (?, ?, 1, ?)`)
-                  .run(p.name, p.name === winner.name ? 1 : 0, p.score);
-              }
+              db.get('SELECT id FROM players WHERE name = ?', [p.name], (err, row) => {
+                if (row) {
+                  db.run(`UPDATE players SET total_games = total_games + 1,
+                    total_wins = total_wins + ?,
+                    best_score = MAX(best_score, ?) WHERE name = ?`,
+                    [p.name === winner.name ? 1 : 0, p.score, p.name]);
+                } else {
+                  db.run(`INSERT INTO players (name, total_wins, total_games, best_score)
+                    VALUES (?, ?, 1, ?)`,
+                    [p.name, p.name === winner.name ? 1 : 0, p.score]);
+                }
+              });
             });
-
-            db.prepare(`INSERT INTO game_history (room_code, winner_name, score, players_count)
-              VALUES (?, ?, ?, ?)`)
-              .run(room.code, winner.name, winner.score, room.players.length);
-
+            db.run(`INSERT INTO game_history (room_code, winner_name, score, players_count)
+              VALUES (?, ?, ?, ?)`,
+              [room.code, winner.name, winner.score, room.players.length]);
             io.to(socket.roomCode).emit('gameOver', { winner, players: room.players });
             delete rooms[socket.roomCode];
           }
