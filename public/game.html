@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เล่นเกม</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="game-container">
+    <!-- Header -->
+    <div class="game-header">
+      <h2>🃏 Memory Card Game</h2>
+      <div id="turn-display" class="turn-display">รอเริ่มเกม...</div>
+    </div>
+
+    <!-- Score Bar -->
+    <div id="score-bar" class="score-bar"></div>
+
+    <!-- Card Grid -->
+    <div id="card-grid" class="card-grid"></div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over" class="modal hidden">
+      <div class="modal-content">
+        <h2>🎉 จบเกม!</h2>
+        <div id="final-scores"></div>
+        <button class="btn-primary" onclick="window.location.href='/'">กลับหน้าหลัก</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let myTurn = false;
+    let flippedCount = 0;
+
+    socket.on('gameStarted', ({ cards, currentPlayer }) => {
+      renderCards(cards);
+      updateTurn(currentPlayer);
+    });
+
+   function renderCards(cards) {
+  const grid = document.getElementById('card-grid');
+  grid.innerHTML = '';
+  cards.forEach(card => {
+    const div = document.createElement('div');
+    div.className = 'card card-back';
+    div.id = 'card-' + card.id;
+    div.innerHTML = `<span class="card-back-design">🂠</span>`;
+    div.onclick = () => flipCard(card.id);
+    grid.appendChild(div);
+  });
+}
+
+
+    function flipCard(cardId) {
+      if (!myTurn || flippedCount >= 2) return;
+      const card = document.getElementById('card-' + cardId);
+      if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+      socket.emit('flipCard', { cardId });
+    }
+
+    function updateTurn(playerName) {
+      const isMe = playerName === socket.playerName;
+      myTurn = isMe;
+      flippedCount = 0;
+      document.getElementById('turn-display').textContent =
+        isMe ? '✨ ตาของคุณ!' : `⏳ ตาของ ${playerName}`;
+      document.getElementById('turn-display').className =
+        'turn-display ' + (isMe ? 'my-turn' : '');
+    }
+
+    socket.on('cardFlipped', ({ cardId, emoji }) => {
+  const card = document.getElementById('card-' + cardId);
+  const suit = emoji[0];
+  const value = emoji.slice(1);
+  const isRed = suit === '♥' || suit === '♦';
+  card.innerHTML = `
+    <div class="card-inner">
+      <div class="card-corner top">${value}<br>${suit}</div>
+      <div class="card-center ${isRed ? 'red' : 'black'}">${suit}</div>
+      <div class="card-corner bottom">${value}<br>${suit}</div>
+    </div>`;
+  card.classList.add('flipped');
+  card.classList.remove('card-back');
+  flippedCount++;
+});
+
+    socket.on('cardsUnflipped', ({ cardIds, currentPlayer }) => {
+  cardIds.forEach(id => {
+    const card = document.getElementById('card-' + id);
+    card.innerHTML = `<span class="card-back-design">🂠</span>`;
+    card.classList.remove('flipped');
+    card.classList.add('card-back');
+  });
+  updateTurn(currentPlayer);
+});
+
+
+    socket.on('cardsUnflipped', ({ cardIds, currentPlayer }) => {
+      cardIds.forEach(id => {
+        const card = document.getElementById('card-' + id);
+        card.textContent = '🂠';
+        card.classList.remove('flipped');
+      });
+      updateTurn(currentPlayer);
+    });
+
+    socket.on('gameOver', ({ winner, players }) => {
+      document.getElementById('final-scores').innerHTML = `
+        <p>🏆 ผู้ชนะ: <strong>${winner.name}</strong></p>
+        <div class="final-list">
+          ${players.sort((a,b) => b.score - a.score).map((p, i) =>
+            `<div class="final-row">
+              <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${p.name}</span>
+              <span>${p.score} คะแนน</span>
+            </div>`
+          ).join('')}
+        </div>`;
+      document.getElementById('game-over').classList.remove('hidden');
+    });
+
+    function updateScoreBar(players) {
+      document.getElementById('score-bar').innerHTML =
+        players.map(p =>
+          `<div class="score-chip"><span>${p.name}</span><strong>${p.score}</strong></div>`
+        ).join('');
+    }
+
+    socket.on('playerLeft', ({ players }) => updateScoreBar(players));
+  </script>
+</body>
+</html>

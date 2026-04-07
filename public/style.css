@@ -1,0 +1,171 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+  min-height: 100vh;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.container { width: 100%; max-width: 480px; text-align: center; padding-top: 40px; }
+
+h1 { font-size: 2.5rem; margin-bottom: 8px; }
+.subtitle { color: #a0aec0; margin-bottom: 30px; }
+
+.card-box {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.tab-buttons { display: flex; gap: 8px; margin-bottom: 20px; }
+.tab-btn {
+  flex: 1; padding: 10px; border: none; border-radius: 8px;
+  background: rgba(255,255,255,0.1); color: #fff; cursor: pointer;
+  transition: all 0.2s;
+}
+.tab-btn.active { background: #e94560; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+input {
+  width: 100%; padding: 12px 16px; margin: 8px 0;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.1); color: #fff; font-size: 1rem;
+}
+input::placeholder { color: #718096; }
+
+.btn-primary {
+  width: 100%; padding: 14px; margin-top: 12px;
+  background: linear-gradient(135deg, #e94560, #c62a47);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: 1rem; cursor: pointer; transition: transform 0.1s;
+}
+.btn-primary:hover { transform: translateY(-2px); }
+
+.player-chip {
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 8px 16px; margin: 6px 0;
+}
+
+.hint { font-size: 0.8rem; color: #718096; margin-top: 8px; }
+.hidden { display: none !important; }
+
+/* Leaderboard */
+.lb-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.lb-table th, .lb-table td {
+  padding: 10px 8px; text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.lb-table th { color: #e94560; }
+
+/* Game */
+.game-container { width: 100%; max-width: 700px; padding: 16px; }
+.game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+.turn-display {
+  background: rgba(255,255,255,0.1);
+  padding: 8px 20px; border-radius: 20px; font-size: 0.95rem;
+}
+.turn-display.my-turn { background: #e94560; font-weight: bold; }
+
+.score-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.score-chip {
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 6px 14px;
+  display: flex; gap: 8px; align-items: center;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+}
+
+.card {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #2d3748, #4a5568);
+  border-radius: 8px; font-size: 1.8rem;
+  display: flex; justify-content: center; align-items: center;
+  cursor: pointer; transition: transform 0.2s;
+  border: 2px solid rgba(255,255,255,0.1);
+  user-select: none;
+}
+.card:hover { transform: scale(1.05); }
+.card.flipped { background: linear-gradient(135deg, #e94560, #c62a47); border-color: #e94560; }
+.card.matched { background: linear-gradient(135deg, #38a169, #276749); border-color: #38a169; cursor: default; }
+
+/* Modal */
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 100;
+}
+.modal-content {
+  background: #1a1a2e; border-radius: 16px;
+  padding: 32px; text-align: center; min-width: 300px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.modal-content h2 { font-size: 2rem; margin-bottom: 16px; }
+.final-list { margin: 16px 0; }
+.final-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.card-back {
+  background: linear-gradient(135deg, #1a237e, #283593) !important;
+  border-color: #3949ab !important;
+}
+
+.card-back-design {
+  font-size: 2rem;
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px;
+  background: white;
+  border-radius: 6px;
+  color: #1a1a1a;
+}
+
+.card-corner {
+  font-size: 0.7rem;
+  font-weight: bold;
+  line-height: 1.1;
+  color: #1a1a1a;
+}
+
+.card-corner.bottom {
+  transform: rotate(180deg);
+  align-self: flex-end;
+}
+
+.card-center {
+  font-size: 1.8rem;
+  text-align: center;
+}
+
+.red { color: #e53935; }
+.black { color: #1a1a1a; }
+
+.card.flipped {
+  background: white !important;
+  border-color: #ccc !important;
+}
+
+.card.matched {
+  background: #e8f5e9 !important;
+  border-color: #66bb6a !important;
+}

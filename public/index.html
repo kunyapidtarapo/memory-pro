@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Card Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🃏 Memory Card Game</h1>
+    <p class="subtitle">เกมจับคู่ไพ่ Multiplayer</p>
+
+    <div class="card-box">
+      <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab('create')">สร้างห้อง</button>
+        <button class="tab-btn" onclick="switchTab('join')">เข้าร่วมห้อง</button>
+        <button class="tab-btn" onclick="switchTab('leaderboard')">🏆 คะแนน</button>
+      </div>
+
+      <!-- สร้างห้อง -->
+      <div id="tab-create" class="tab-content active">
+        <h2>สร้างห้องใหม่</h2>
+        <input type="text" id="create-name" placeholder="ชื่อผู้เล่น" maxlength="20">
+        <button class="btn-primary" onclick="createRoom()">สร้างห้อง</button>
+      </div>
+
+      <!-- เข้าร่วม -->
+      <div id="tab-join" class="tab-content">
+        <h2>เข้าร่วมห้อง</h2>
+        <input type="text" id="join-name" placeholder="ชื่อผู้เล่น" maxlength="20">
+        <input type="text" id="join-code" placeholder="รหัสห้อง (เช่น AB12C)" maxlength="5">
+        <button class="btn-primary" onclick="joinRoom()">เข้าร่วม</button>
+      </div>
+
+      <!-- Leaderboard -->
+      <div id="tab-leaderboard" class="tab-content">
+        <h2>🏆 Leaderboard</h2>
+        <div id="leaderboard-list">กำลังโหลด...</div>
+      </div>
+    </div>
+
+    <!-- Waiting Room -->
+    <div id="waiting-room" class="card-box hidden">
+      <h2>รอผู้เล่น...</h2>
+      <p>รหัสห้อง: <strong id="room-code-display"></strong></p>
+      <div id="player-list"></div>
+      <button class="btn-primary" id="start-btn" onclick="startGame()">เริ่มเกม</button>
+      <p class="hint">ต้องการอย่างน้อย 1 คนเพื่อเริ่ม</p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      event.target.classList.add('active');
+      if (tab === 'leaderboard') loadLeaderboard();
+    }
+
+    function createRoom() {
+      const name = document.getElementById('create-name').value.trim();
+      if (!name) return alert('กรุณาใส่ชื่อ');
+      socket.emit('createRoom', { playerName: name });
+    }
+
+    function joinRoom() {
+      const name = document.getElementById('join-name').value.trim();
+      const code = document.getElementById('join-code').value.trim().toUpperCase();
+      if (!name || !code) return alert('กรุณาใส่ชื่อและรหัสห้อง');
+      socket.emit('joinRoom', { roomCode: code, playerName: name });
+    }
+
+    function startGame() {
+      socket.emit('startGame');
+    }
+
+    function showWaitingRoom(code, players) {
+      document.querySelector('.card-box').classList.add('hidden');
+      document.getElementById('waiting-room').classList.remove('hidden');
+      document.getElementById('room-code-display').textContent = code;
+      updatePlayerList(players);
+    }
+
+    function updatePlayerList(players) {
+      document.getElementById('player-list').innerHTML =
+        players.map(p => `<div class="player-chip">👤 ${p.name}</div>`).join('');
+    }
+
+    async function loadLeaderboard() {
+      const res = await fetch('/api/leaderboard');
+      const data = await res.json();
+      if (data.length === 0) {
+        document.getElementById('leaderboard-list').innerHTML = '<p>ยังไม่มีข้อมูล</p>';
+        return;
+      }
+      document.getElementById('leaderboard-list').innerHTML = `
+        <table class="lb-table">
+          <tr><th>#</th><th>ชื่อ</th><th>ชนะ</th><th>เล่น</th><th>สูงสุด</th></tr>
+          ${data.map((p, i) => `
+            <tr>
+              <td>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i+1}</td>
+              <td>${p.name}</td>
+              <td>${p.total_wins}</td>
+              <td>${p.total_games}</td>
+              <td>${p.best_score}</td>
+            </tr>
+          `).join('')}
+        </table>`;
+    }
+
+    socket.on('roomCreated', ({ code, players }) => showWaitingRoom(code, players));
+    socket.on('playerJoined', ({ players }) => updatePlayerList(players));
+    socket.on('error', (msg) => alert(msg));
+    socket.on('gameStarted', () => {
+      window.location.href = '/game.html';
+    });
+  </script>
+</body>
+</html>
