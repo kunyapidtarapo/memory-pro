@@ -26,16 +26,16 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     // ดึงชื่อก่อนเชื่อม socket
-    const myName = localStorage.getItem('playerName') || '';
+    const myName = sessionStorage.getItem('playerName') || '';
     const socket = io();
     let myTurn = false;
     let flippedCount = 0;
 
     // render จาก localStorage ที่ index.html เซฟไว้
-    const savedData = localStorage.getItem('gameData');
+    const savedData = sessionStorage.getItem('gameData');
     if (savedData) {
       const data = JSON.parse(savedData);
-      localStorage.removeItem('gameData');
+      sessionStorage.removeItem('gameData');
       renderCards(data.cards);
       updateScoreBar(data.players);
       updateTurn(data.currentPlayer);
